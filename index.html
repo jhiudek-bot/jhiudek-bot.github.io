@@ -146,12 +146,9 @@
         
         <div id="controls">
             <select id="filmStock">
-                <option value="portra400">Portra 400</option>
-                <option value="portra800">Portra 800</option>
-                <option value="trix400">Tri-X 400</option>
-                <option value="ektar100">Ektar 100</option>
-                <option value="superia400">Superia 400</option>
-                <option value="gold200">Gold 200</option>
+                <option value="kodak">Kodak Gold</option>
+                <option value="fuji">Fuji (Blues/Pinks)</option>
+                <option value="candid">Candid Flash</option>
             </select>
             
             <button id="shutter"></button>
@@ -162,54 +159,38 @@
 
     <script>
         const filmStocks = {
-            portra400: {
-                name: 'PORTRA 400',
-                grain: 0.015,
-                colorShift: [1.05, 1.0, 0.98],
-                contrast: 1.1,
-                saturation: 0.95
+            kodak: {
+                name: 'KODAK GOLD',
+                grain: 0.022,
+                colorShift: [1.15, 1.05, 0.88],  // Warm, golden, yellow-orange bias
+                contrast: 1.05,
+                saturation: 1.08,
+                hasFlash: false
             },
-            portra800: {
-                name: 'PORTRA 800',
-                grain: 0.025,
-                colorShift: [1.08, 1.0, 0.95],
-                contrast: 1.08,
-                saturation: 0.92
-            },
-            trix400: {
-                name: 'TRI-X 400',
-                grain: 0.035,
-                colorShift: [1.0, 1.0, 1.0],
-                contrast: 1.25,
-                saturation: 0
-            },
-            ektar100: {
-                name: 'EKTAR 100',
-                grain: 0.008,
-                colorShift: [1.02, 1.0, 1.03],
-                contrast: 1.2,
-                saturation: 1.15
-            },
-            superia400: {
-                name: 'SUPERIA 400',
-                grain: 0.02,
-                colorShift: [0.98, 1.0, 1.05],
-                contrast: 1.12,
-                saturation: 1.05
-            },
-            gold200: {
-                name: 'GOLD 200',
+            fuji: {
+                name: 'FUJI SUPERIA',
+                colorShift: [0.92, 0.98, 1.18],  // Cool blues, boosted magentas/pinks
+                contrast: 1.15,
+                saturation: 1.2,
                 grain: 0.018,
-                colorShift: [1.08, 1.02, 0.92],
-                contrast: 1.08,
-                saturation: 1.0
+                bluePush: true,  // Special flag for enhanced blues/pinks
+                hasFlash: false
+            },
+            candid: {
+                name: 'CANDID FLASH',
+                grain: 0.028,
+                colorShift: [1.1, 1.05, 0.95],
+                contrast: 0.95,  // Lower contrast for that blown-out look
+                saturation: 0.85,  // Slightly desaturated
+                hasFlash: true,  // Always apply flash effect
+                flashIntensity: 0.4
             }
         };
 
         let video = document.getElementById('video');
         let canvas = document.getElementById('canvas');
         let ctx = canvas.getContext('2d', { willReadFrequently: true });
-        let currentStock = filmStocks.portra400;
+        let currentStock = filmStocks.kodak;
         let facingMode = 'environment';
         let stream = null;
         let frameCount = 36;
@@ -330,6 +311,12 @@
                 shifts = shifts.map(s => s + (Math.random() - 0.5) * 0.04);
             }
             
+            // Flash effect for candid mode
+            let flashBoost = 0;
+            if (currentStock.hasFlash && isCapture) {
+                flashBoost = currentStock.flashIntensity + Math.random() * 0.15;
+            }
+            
             // Apply effects to each pixel
             for (let i = 0; i < data.length; i += 4) {
                 let r = data[i];
@@ -341,10 +328,37 @@
                 g *= exposure;
                 b *= exposure;
                 
+                // Flash effect - blow out highlights, especially skin tones
+                if (flashBoost > 0) {
+                    let luminance = (r + g + b) / 3;
+                    let isSkinTone = (r > g && r > b && g > b * 1.1);
+                    
+                    if (isSkinTone || luminance > 150) {
+                        let boost = flashBoost * 255;
+                        if (isSkinTone) boost *= 1.5; // Extra boost for skin
+                        r += boost;
+                        g += boost * 0.95;
+                        b += boost * 0.85;
+                    }
+                }
+                
                 // Film curve (lift blacks, compress highlights)
                 r = Math.pow(r / 255, 0.9) * 242 + 13;
                 g = Math.pow(g / 255, 0.9) * 242 + 13;
                 b = Math.pow(b / 255, 0.9) * 242 + 13;
+                
+                // Fuji blue/pink enhancement
+                if (currentStock.bluePush) {
+                    // Boost blues in cool areas
+                    if (b > r && b > g) {
+                        b *= 1.25;
+                    }
+                    // Boost magentas/pinks (high red + high blue)
+                    if (r > 100 && b > 100 && g < (r + b) / 2) {
+                        r *= 1.15;
+                        b *= 1.15;
+                    }
+                }
                 
                 // Color shifts
                 r *= shifts[0];
