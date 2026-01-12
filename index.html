@@ -65,6 +65,7 @@
           const [images, setImages] = useState([]);
           const [selectedStyle, setSelectedStyle] = useState('portra400');
           const [processing, setProcessing] = useState(false);
+          const [progress, setProgress] = useState(0);
           const fileInputRef = useRef(null);
           const canvasRef = useRef(null);
 
@@ -319,19 +320,27 @@
 
           const processAllImages = async () => {
             setProcessing(true);
-            const updated = [];
+            setProgress(0);
             
-            for (const image of images) {
-              const processedUrl = await processImage(image);
-              updated.push({
-                ...image,
+            const updatedImages = [...images];
+            
+            for (let i = 0; i < images.length; i++) {
+              const processedUrl = await processImage(images[i]);
+              updatedImages[i] = {
+                ...updatedImages[i],
                 processed: true,
                 processedUrl
-              });
+              };
+              
+              setProgress(Math.round(((i + 1) / images.length) * 100));
+              setImages([...updatedImages]);
+              
+              // Small delay to let UI breathe
+              await new Promise(resolve => setTimeout(resolve, 50));
             }
             
-            setImages(updated);
             setProcessing(false);
+            setProgress(0);
           };
 
           const downloadImage = (image) => {
@@ -442,7 +451,7 @@
                         className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 disabled:from-gray-600 disabled:to-gray-700 px-8 py-4 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2"
                       >
                         <Film />
-                        {processing ? 'Processing...' : `Apply ${filmStyles[selectedStyle].name}`}
+                        {processing ? `Processing... ${progress}%` : `Apply ${filmStyles[selectedStyle].name}`}
                       </button>
                       
                       {images.some(img => img.processed) && (
