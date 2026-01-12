@@ -527,4 +527,31 @@
                       <button
                         onClick={processAllImages}
                         disabled={processing}
-                        className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 disabled:from-gray-600 disabled:to-gray-700 px-8 py-4 rounded-xl font-semibold transition-
+                        <button
+                        onClick={processAllImages}
+                        disabled={processing}
+                        className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 disabled:from-gray-600 disabled:to-gray-700 px-8 py-4 rounded-xl font-semibold transition-all duration-200"
+                      >
+                        {processing ? `Processing… ${progress}%` : "Apply Film Style"}
+                      </button>
+
+                      <button
+                        onClick={downloadAll}
+                        disabled={images.every(img => !img.processed)}
+                        className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-700 px-8 py-4 rounded-xl font-semibold transition-all duration-200"
+                      >
+                        <Download /> Download All
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* hidden canvas used for processing */}
+              <canvas ref={canvasRef} className="hidden" />
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<FilmPhotoEditor />);
